@@ -22,6 +22,12 @@ interface SessionData {
     name?: string;
     price?: number;
   };
+  editCategory?: string;
+  editIndex?: number;
+  editStep?: string;
+  _newName?: string;
+  deleteCategory?: string;
+  deleteIndex?: number;
 }
 
 declare module 'telegraf' {
@@ -42,28 +48,97 @@ const saveServices = (services: Services) => {
 
 const showAdminMenu = async (ctx: Context) => {
   const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('📂 Посмотреть услуги', 'admin_view_services')],
-    [Markup.button.callback('➕ Добавить услугу', 'admin_add_service')],
-    [Markup.button.callback('✏️ Редактировать услугу', 'admin_edit_service')],
-    [Markup.button.callback('🗑 Удалить услугу', 'admin_delete_service')],
-    [Markup.button.callback('📁 Экспорт JSON', 'admin_export_json')]
+    [Markup.button.callback(' 📂 Посмотреть услуги ', 'admin_view_services')],
+    [Markup.button.callback(' ➕ Добавить услугу ', 'admin_add_service')],
+    [Markup.button.callback(' ✏️ Редактировать услугу ', 'admin_edit_service')],
+    [Markup.button.callback(' 🗑 Удалить услугу ', 'admin_delete_service')],
+    [Markup.button.callback(' 📁 Экспорт JSON ', 'admin_export_json')]
   ]);
 
   await ctx.reply('Админ-меню:', keyboard);
 };
 
 export const setupAdminHandlers = (bot: Telegraf) => {
-  // Handle password input
+  // Обработка текстовых сообщений для пароля и добавления услуги
   bot.on('text', async (ctx) => {
-    if (!ctx.session?.waitingForPassword) return;
+    // 1. Ввод пароля администратора
+    if (ctx.session?.waitingForPassword) {
+      const password = ctx.message.text;
+      if (password === process.env.ADMIN_PASSWORD) {
+        ctx.session.isAdmin = true;
+        ctx.session.waitingForPassword = false;
+        await ctx.reply('Вход выполнен!');
+        await showAdminMenu(ctx);
+      } else {
+        await ctx.reply('Неверный пароль. Попробуйте снова или используйте /admin для выхода.');
+      }
+      return;
+    }
 
-    const password = ctx.message.text;
-    if (password === process.env.ADMIN_PASSWORD) {
-      ctx.session.isAdmin = true;
-      ctx.session.waitingForPassword = false;
-      await showAdminMenu(ctx);
-    } else {
-      await ctx.reply('Неверный пароль. Попробуйте снова или используйте /admin для выхода.');
+    // 2. Добавление услуги
+    if (ctx.session?.isAdmin && ctx.session.addingService) {
+      if (!ctx.session.addingService.name) {
+        ctx.session.addingService.name = ctx.message.text;
+        await ctx.reply('Введите цену услуги (только число):');
+      } else if (!ctx.session.addingService.price) {
+        const price = parseInt(ctx.message.text);
+        if (isNaN(price)) {
+          await ctx.reply('Пожалуйста, введите корректное число:');
+          return;
+        }
+
+        const services = loadServices();
+        const category = ctx.session.addingService.category as keyof Services;
+        services[category].push({
+          name: ctx.session.addingService.name,
+          price
+        });
+        saveServices(services);
+
+        delete ctx.session.addingService;
+        await ctx.reply('✅ Услуга успешно добавлена!');
+        await showAdminMenu(ctx);
+      }
+      return;
+    }
+
+    // 3. Редактирование услуги
+    if (ctx.session?.isAdmin && ctx.session.editIndex !== undefined && ctx.session.editCategory) {
+      const services = loadServices();
+      const category = ctx.session.editCategory as keyof Services;
+      const idx = ctx.session.editIndex;
+
+      if (ctx.session.editStep === 'name') {
+        const newName = ctx.message.text;
+        ctx.session._newName = newName;
+        ctx.session.editStep = 'price';
+        await ctx.reply('Введите новую цену услуги (или отправьте - чтобы не менять):');
+        return;
+      }
+
+      if (ctx.session.editStep === 'price') {
+        const newPrice = ctx.message.text;
+        const newName = ctx.session._newName;
+        if (newName && newName !== '-') {
+          services[category][idx].name = newName;
+        }
+        if (newPrice !== '-') {
+          const price = parseInt(newPrice);
+          if (isNaN(price)) {
+            await ctx.reply('Пожалуйста, введите корректное число или - чтобы не менять:');
+            return;
+          }
+          services[category][idx].price = price;
+        }
+        saveServices(services);
+        delete ctx.session.editCategory;
+        delete ctx.session.editIndex;
+        delete ctx.session.editStep;
+        delete ctx.session._newName;
+        await ctx.reply('✅ Услуга успешно отредактирована!');
+        await showAdminMenu(ctx);
+        return;
+      }
     }
   });
 
@@ -91,8 +166,8 @@ export const setupAdminHandlers = (bot: Telegraf) => {
 
     const keyboard = Markup.inlineKeyboard([
       [
-        Markup.button.callback('🚗 Автомобиль', 'add_car'),
-        Markup.button.callback('🏍️ Мотоцикл', 'add_moto')
+        Markup.button.callback(' 🚗 Автомобиль ', 'add_car'),
+        Markup.button.callback(' 🏍️ Мотоцикл ', 'add_moto')
       ],
       [Markup.button.callback('🛠 Доп. услуги', 'add_additional')]
     ]);
@@ -107,34 +182,6 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     const category = ctx.match[1];
     ctx.session.addingService = { category };
     await ctx.editMessageText('Введите название услуги:');
-  });
-
-  // Handle service name input
-  bot.on('text', async (ctx) => {
-    if (!ctx.session?.isAdmin || !ctx.session.addingService) return;
-
-    if (!ctx.session.addingService.name) {
-      ctx.session.addingService.name = ctx.message.text;
-      await ctx.reply('Введите цену услуги (только число):');
-    } else if (!ctx.session.addingService.price) {
-      const price = parseInt(ctx.message.text);
-      if (isNaN(price)) {
-        await ctx.reply('Пожалуйста, введите корректное число:');
-        return;
-      }
-
-      const services = loadServices();
-      const category = ctx.session.addingService.category as keyof Services;
-      services[category].push({
-        name: ctx.session.addingService.name,
-        price
-      });
-      saveServices(services);
-
-      delete ctx.session.addingService;
-      await ctx.reply('✅ Услуга успешно добавлена!');
-      await showAdminMenu(ctx);
-    }
   });
 
   // Export JSON
@@ -154,5 +201,124 @@ export const setupAdminHandlers = (bot: Telegraf) => {
 
     writeFileSync(filePath, jsonString);
     await ctx.replyWithDocument({ source: filePath });
+  });
+
+  // 1. Кнопка "Редактировать услугу" — выбор категории
+  bot.action('admin_edit_service', async (ctx) => {
+    if (!ctx.session?.isAdmin) return;
+
+    const keyboard = Markup.inlineKeyboard([
+      [
+        Markup.button.callback(' 🚗 Автомобиль ', 'edit_car'),
+        Markup.button.callback(' 🏍️ Мотоцикл ', 'edit_moto')
+      ],
+      [Markup.button.callback('🛠 Доп. услуги', 'edit_additional')]
+    ]);
+    await ctx.editMessageText('Выберите категорию для редактирования услуги:', keyboard);
+  });
+
+  // 2. Выбор услуги в категории
+  bot.action(/^edit_(car|moto|additional)$/, async (ctx) => {
+    if (!ctx.session?.isAdmin) return;
+    const category = ctx.match[1];
+    ctx.session.editCategory = category;
+
+    const services = loadServices();
+    const categoryServices = services[category as keyof Services];
+
+    if (!categoryServices.length) {
+      await ctx.editMessageText('В этой категории нет услуг для редактирования.');
+      return;
+    }
+
+    const buttons = categoryServices.map((service, idx) =>
+      [Markup.button.callback(`${service.name} - ${service.price} MDL`, `edit_service_${idx}`)]
+    );
+    await ctx.editMessageText('Выберите услугу для редактирования:', Markup.inlineKeyboard(buttons));
+  });
+
+  // 3. Запросить новое имя/цену
+  bot.action(/^edit_service_(\d+)$/, async (ctx) => {
+    if (!ctx.session?.isAdmin || !ctx.session.editCategory) return;
+    const idx = parseInt(ctx.match[1]);
+    ctx.session.editIndex = idx;
+    ctx.session.editStep = 'name';
+    await ctx.editMessageText('Введите новое название услуги (или отправьте - чтобы не менять):');
+  });
+
+  // 1. Кнопка "Удалить услугу" — выбор категории
+  bot.action('admin_delete_service', async (ctx) => {
+    if (!ctx.session?.isAdmin) return;
+
+    const keyboard = Markup.inlineKeyboard([
+      [
+        Markup.button.callback(' 🚗 Автомобиль ', 'delete_car'),
+        Markup.button.callback(' 🏍️ Мотоцикл ', 'delete_moto')
+      ],
+      [Markup.button.callback('🛠 Доп. услуги', 'delete_additional')]
+    ]);
+    await ctx.editMessageText('Выберите категорию для удаления услуги:', keyboard);
+  });
+
+  // 2. Выбор услуги в категории
+  bot.action(/^delete_(car|moto|additional)$/, async (ctx) => {
+    if (!ctx.session?.isAdmin) return;
+    const category = ctx.match[1];
+    ctx.session.deleteCategory = category;
+
+    const services = loadServices();
+    const categoryServices = services[category as keyof Services];
+
+    if (!categoryServices.length) {
+      await ctx.editMessageText('В этой категории нет услуг для удаления.');
+      return;
+    }
+
+    const buttons = categoryServices.map((service, idx) =>
+      [Markup.button.callback(`${service.name} (${service.price} MDL)`, `delete_service_${idx}`)]
+    );
+    await ctx.editMessageText('Выберите услугу для удаления:', Markup.inlineKeyboard(buttons));
+  });
+
+  // 3. Подтверждение удаления
+  bot.action(/^delete_service_(\d+)$/, async (ctx) => {
+    if (!ctx.session?.isAdmin || !ctx.session.deleteCategory) return;
+    const idx = parseInt(ctx.match[1]);
+    ctx.session.deleteIndex = idx;
+
+    const services = loadServices();
+    const category = ctx.session.deleteCategory as keyof Services;
+    const service = services[category][idx];
+
+    await ctx.editMessageText(
+      `Вы уверены, что хотите удалить услугу "${service.name}" - ${service.price} MDL?`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Нет', 'cancel_delete'), Markup.button.callback('✅ Да, удалить', 'confirm_delete')]
+      ])
+    );
+  });
+
+  // 4. Отмена удаления
+  bot.action('cancel_delete', async (ctx) => {
+    delete ctx.session.deleteCategory;
+    delete ctx.session.deleteIndex;
+    await ctx.editMessageText('Удаление отменено.');
+    await showAdminMenu(ctx);
+  });
+
+  // 5. Подтверждение удаления
+  bot.action('confirm_delete', async (ctx) => {
+    if (!ctx.session?.isAdmin || ctx.session.deleteIndex === undefined || !ctx.session.deleteCategory) return;
+    const services = loadServices();
+    const category = ctx.session.deleteCategory as keyof Services;
+    const idx = ctx.session.deleteIndex;
+
+    const removed = services[category].splice(idx, 1);
+    saveServices(services);
+
+    delete ctx.session.deleteCategory;
+    delete ctx.session.deleteIndex;
+    await ctx.editMessageText(`✅ Услуга "${removed[0]?.name}" удалена!`);
+    await showAdminMenu(ctx);
   });
 }; 
