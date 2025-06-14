@@ -64,6 +64,7 @@ npm start
 ### Admin Commands
 
 - `/admin` - Access admin interface (requires password)
+- `/logout` - Log out from admin mode (session reset, password will be required next time)
 - View all services
 - Add new services
 - Edit existing services

@@ -321,4 +321,9 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await ctx.editMessageText(`✅ Услуга "${removed[0]?.name}" удалена!`);
     await showAdminMenu(ctx);
   });
+
+  bot.command('logout', async (ctx) => {
+    ctx.session = {};
+    await ctx.reply('Вы вышли из админки. Для входа снова потребуется пароль.');
+  });
 }; 

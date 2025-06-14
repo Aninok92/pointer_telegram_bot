@@ -26,11 +26,11 @@ export const adminCommand = async (ctx: Context) => {
 
 const showAdminMenu = async (ctx: Context) => {
   const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('📂 Посмотреть услуги', 'admin_view_services')],
-    [Markup.button.callback('➕ Добавить услугу', 'admin_add_service')],
-    [Markup.button.callback('✏️ Редактировать услугу', 'admin_edit_service')],
-    [Markup.button.callback('🗑 Удалить услугу', 'admin_delete_service')],
-    [Markup.button.callback('📁 Экспорт JSON', 'admin_export_json')]
+    [Markup.button.callback(' 📂 Посмотреть услуги ', 'admin_view_services')],
+    [Markup.button.callback(' ➕ Добавить услугу ', 'admin_add_service')],
+    [Markup.button.callback(' ✏️ Редактировать услугу ', 'admin_edit_service')],
+    [Markup.button.callback(' 🗑 Удалить услугу ', 'admin_delete_service')],
+    [Markup.button.callback(' 📁 Экспорт JSON ', 'admin_export_json')]
   ]);
 
   await ctx.reply('Админ-меню:', keyboard);
