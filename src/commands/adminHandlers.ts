@@ -3,33 +3,7 @@ import { Markup } from 'telegraf';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { messages } from '../utils/messages';
-
-interface Service {
-  name: string;
-  price: number;
-}
-
-interface Services {
-  car: Service[];
-  moto: Service[];
-  additional: Service[];
-}
-
-interface SessionData {
-  isAdmin?: boolean;
-  waitingForPassword?: boolean;
-  addingService?: {
-    category: string;
-    name?: string;
-    price?: number;
-  };
-  editCategory?: string;
-  editIndex?: number;
-  editStep?: string;
-  _newName?: string;
-  deleteCategory?: string;
-  deleteIndex?: number;
-}
+import { Service, Services, SessionData } from '../types';
 
 declare module 'telegraf' {
   interface Context {

@@ -1,14 +1,5 @@
 import { Context, Middleware } from 'telegraf';
-
-interface SessionData {
-  isAdmin?: boolean;
-  waitingForPassword?: boolean;
-  addingService?: {
-    category: string;
-    name?: string;
-    price?: number;
-  };
-}
+import { SessionData } from '../types';
 
 declare module 'telegraf' {
   interface Context {

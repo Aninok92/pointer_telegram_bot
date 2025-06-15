@@ -5,22 +5,7 @@ import { join } from 'path';
 import { generateInvoice } from '../pdf/generateInvoice';
 import { existsSync, mkdirSync } from 'fs';
 import { messages } from '../utils/messages';
-
-interface Service {
-  name: string;
-  price: number;
-}
-
-interface Services {
-  car: Service[];
-  moto: Service[];
-  additional: Service[];
-}
-
-interface UserState {
-  selectedServices: Map<string, number>;
-  currentCategory: string;
-}
+import { Service, Services, UserState } from '../types';
 
 const userStates = new Map<number, UserState>();
 

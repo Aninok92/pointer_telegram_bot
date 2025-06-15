@@ -2,17 +2,7 @@ import { join } from 'path';
 import { createWriteStream, existsSync, mkdirSync } from 'fs';
 import PDFDocument from 'pdfkit';
 import { messages } from '../utils/messages';
-
-interface Service {
-  name: string;
-  price: number;
-}
-
-interface Services {
-  car: Service[];
-  moto: Service[];
-  additional: Service[];
-}
+import { Services } from '../types';
 
 const loadServices = (): Services => {
   const servicesPath = join(__dirname, '../data/services.json');
