@@ -6,6 +6,7 @@ import { setupUserHandlers } from './commands/userHandlers';
 import { setupAdminHandlers } from './commands/adminHandlers';
 import { logoutCommand } from './commands/logout';
 import Redis from 'ioredis';
+import { messages } from './utils/messages';
 
 // Load environment variables
 config();
@@ -47,9 +48,9 @@ setupAdminHandlers(bot);
 
 // Set bot command menu for Telegram UI
 bot.telegram.setMyCommands([
-  { command: 'start', description: 'Start the bot' },
-  { command: 'admin', description: 'Admin panel (password required)' },
-  { command: 'logout', description: 'Log out from admin mode' }
+  { command: 'start', description: messages.commands.start },
+  { command: 'admin', description: messages.commands.admin },
+  { command: 'logout', description: messages.commands.logout }
 ]);
 
 // Start bot

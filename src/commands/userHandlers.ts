@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { generateInvoice } from '../pdf/generateInvoice';
 import { existsSync, mkdirSync } from 'fs';
+import { messages } from '../utils/messages';
 
 interface Service {
   name: string;
@@ -36,14 +37,14 @@ const getServiceKeyboard = (category: string, userId: number) => {
   const buttons = categoryServices.map((service, idx) => {
     const quantity = userState.selectedServices.get(service.name) || 0;
     const buttonText = quantity > 0
-      ? `✔️ ${service.name} – ${service.price} MDL × ${quantity}`
+      ? `✔️ ${service.name} – ${service.price} MDL ×${quantity}`
       : `${service.name} – ${service.price} MDL`;
     return [Markup.button.callback(buttonText, `service_${category}_${idx}`)];
   });
 
   buttons.push([
-    Markup.button.callback('🧹 Очистить выбор ', 'clear_selection'),
-    Markup.button.callback('✅ Завершить выбор ', 'finish_selection')
+    Markup.button.callback(messages.user.buttons.clearSelection, 'clear_selection'),
+    Markup.button.callback(messages.user.buttons.finishSelection, 'finish_selection')
   ]);
 
   return Markup.inlineKeyboard(buttons);
@@ -64,7 +65,7 @@ export const setupUserHandlers = (bot: Telegraf) => {
     }
 
     await ctx.editMessageText(
-      'Выберите услуги:',
+      messages.user.selectServices,
       getServiceKeyboard(category, userId)
     );
   });
@@ -83,7 +84,7 @@ export const setupUserHandlers = (bot: Telegraf) => {
     const currentQuantity = userState.selectedServices.get(service.name) || 0;
     userState.selectedServices.set(service.name, currentQuantity + 1);
     await ctx.editMessageText(
-      'Выберите услуги:',
+      messages.user.selectServices,
       getServiceKeyboard(category, userId)
     );
   });
@@ -98,7 +99,7 @@ export const setupUserHandlers = (bot: Telegraf) => {
 
     const services = loadServices();
     let total = 0;
-    let message = 'Вы выбрали:\n';
+    let message = messages.user.finishSelection + '\n';
 
     for (const [serviceName, quantity] of userState.selectedServices.entries()) {
       const service = services[userState.currentCategory as keyof Services]
@@ -107,14 +108,14 @@ export const setupUserHandlers = (bot: Telegraf) => {
       if (service) {
         const serviceTotal = service.price * quantity;
         total += serviceTotal;
-        message += `– ${serviceName} × ${quantity} – ${serviceTotal} MDL\n`;
+        message += `– ${serviceName} ×${quantity} – ${serviceTotal} ${messages.pdf.currency}\n`;
       }
     }
 
-    message += `\n💰 Общая сумма: ${total} MDL`;
+    message += messages.user.total(total);
 
     const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback('📄 Получить счёт в PDF', 'generate_pdf')]
+      [Markup.button.callback(messages.user.getPdf, 'generate_pdf')]
     ]);
 
     await ctx.editMessageText(message, keyboard);
@@ -141,7 +142,7 @@ export const setupUserHandlers = (bot: Telegraf) => {
     }
 
     try {
-      await ctx.answerCbQuery('Генерация PDF...');
+      await ctx.answerCbQuery(messages.user.pdfGenerating);
       
       // Create temp directory if it doesn't exist
       const tempDir = join(__dirname, '../../temp');
@@ -151,20 +152,20 @@ export const setupUserHandlers = (bot: Telegraf) => {
 
       const pdfPath = await generateInvoice(
         userState.selectedServices,
-        userState.currentCategory,
-        total
+        total,
+        userState.currentCategory
       );
       
       if (!existsSync(pdfPath)) {
-        throw new Error('PDF file was not created');
+        throw new Error(messages.pdf.fileNotCreated);
       }
 
       await ctx.replyWithDocument({ source: pdfPath });
-      await ctx.answerCbQuery('PDF успешно сгенерирован!');
+      await ctx.answerCbQuery(messages.user.pdfSuccess);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      await ctx.answerCbQuery('Ошибка при генерации PDF. Пожалуйста, попробуйте снова.');
-      await ctx.reply('Произошла ошибка при генерации PDF. Пожалуйста, попробуйте снова или обратитесь к администратору.');
+      await ctx.answerCbQuery(messages.user.pdfError);
+      await ctx.reply(messages.common.error);
     }
   });
 
@@ -179,9 +180,9 @@ export const setupUserHandlers = (bot: Telegraf) => {
     userState.selectedServices.clear();
 
     await ctx.editMessageText(
-      'Выберите услуги:',
+      messages.user.selectServices,
       getServiceKeyboard(userState.currentCategory, userId)
     );
-    await ctx.answerCbQuery('Выбор очищен!');
+    await ctx.answerCbQuery(messages.user.clearSelection);
   });
 }; 

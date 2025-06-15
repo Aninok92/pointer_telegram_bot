@@ -2,10 +2,11 @@ import { Context } from 'telegraf';
 import { Markup } from 'telegraf';
 import 'dotenv/config';
 import { env } from 'node:process';
+import { messages } from '../utils/messages';
 
 const ADMIN_PASSWORD = env.ADMIN_PASSWORD;
 if (!ADMIN_PASSWORD) {
-  throw new Error('ADMIN_PASSWORD is not set! Please add it to your .env file.');
+  throw new Error(messages.admin.noPassword);
 }
 
 export const adminCommand = async (ctx: Context) => {
@@ -19,19 +20,19 @@ export const adminCommand = async (ctx: Context) => {
   }
 
   // Request password
-  await ctx.reply('Введите пароль администратора:');
+  await ctx.reply(messages.admin.enterPassword);
   if (!ctx.session) ctx.session = {};
   (ctx.session as any).waitingForPassword = true;
 };
 
 const showAdminMenu = async (ctx: Context) => {
   const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback(' 📂 Посмотреть услуги ', 'admin_view_services')],
-    [Markup.button.callback(' ➕ Добавить услугу ', 'admin_add_service')],
-    [Markup.button.callback(' ✏️ Редактировать услугу ', 'admin_edit_service')],
-    [Markup.button.callback(' 🗑 Удалить услугу ', 'admin_delete_service')],
-    [Markup.button.callback(' 📁 Экспорт JSON ', 'admin_export_json')]
+    [Markup.button.callback(messages.admin.buttons.viewServices, 'admin_view_services')],
+    [Markup.button.callback(messages.admin.buttons.addService, 'admin_add_service')],
+    [Markup.button.callback(messages.admin.buttons.editService, 'admin_edit_service')],
+    [Markup.button.callback(messages.admin.buttons.deleteService, 'admin_delete_service')],
+    [Markup.button.callback(messages.admin.buttons.exportJson, 'admin_export_json')]
   ]);
 
-  await ctx.reply('Админ-меню:', keyboard);
+  await ctx.reply(messages.admin.menu, keyboard);
 }; 

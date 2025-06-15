@@ -1,6 +1,7 @@
-import PDFDocument from 'pdfkit';
 import { join } from 'path';
-import { createWriteStream, existsSync, mkdirSync, readFileSync } from 'fs';
+import { createWriteStream, existsSync, mkdirSync } from 'fs';
+import PDFDocument from 'pdfkit';
+import { messages } from '../utils/messages';
 
 interface Service {
   name: string;
@@ -15,13 +16,13 @@ interface Services {
 
 const loadServices = (): Services => {
   const servicesPath = join(__dirname, '../data/services.json');
-  return JSON.parse(readFileSync(servicesPath, 'utf-8'));
+  return require(servicesPath);
 };
 
-export const generateInvoice = async (
+export const generateInvoice = (
   services: Map<string, number>,
-  category: string,
-  total: number
+  total: number,
+  category: string
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     try {
@@ -57,18 +58,18 @@ export const generateInvoice = async (
       doc.pipe(writeStream);
 
       // Add content
-      doc.fontSize(20).text('Малярная студия "Название"', { align: 'center' });
+      doc.fontSize(20).text(messages.pdf.title, { align: 'center' });
       doc.moveDown();
       
       const date = new Date().toLocaleDateString('ru-RU');
-      doc.fontSize(12).text(`Дата: ${date}`, { align: 'right' });
+      doc.fontSize(12).text(`${messages.pdf.date} ${date}`, { align: 'right' });
       doc.moveDown();
 
       // Add line for vehicle number
-      doc.fontSize(12).text('Номер транспортного средства: ___________________________');
+      doc.fontSize(12).text(`${messages.pdf.vehicleNumber} ___________________________`);
       doc.moveDown();
 
-      doc.fontSize(14).text('Выбранные услуги:');
+      doc.fontSize(14).text(messages.pdf.selectedServices);
       doc.moveDown();
 
       // Add services
@@ -79,14 +80,14 @@ export const generateInvoice = async (
         const service = categoryServices.find(s => s.name === serviceName);
         if (service) {
           const serviceTotal = service.price * quantity;
-          doc.fontSize(12).text(`- ${serviceName} ×${quantity} – ${serviceTotal} MDL`);
+          doc.fontSize(12).text(`- ${serviceName} ×${quantity} – ${serviceTotal} ${messages.pdf.currency}`);
         }
       }
 
       doc.moveDown();
-      doc.fontSize(14).text(`Итого: ${total} MDL`, { align: 'right' });
+      doc.fontSize(14).text(`${messages.pdf.total} ${total} ${messages.pdf.currency}`, { align: 'right' });
       doc.moveDown();
-      doc.fontSize(12).text('Спасибо за обращение!', { align: 'center' });
+      doc.fontSize(12).text(messages.pdf.thankYou, { align: 'center' });
 
       // Finalize PDF
       doc.end();
