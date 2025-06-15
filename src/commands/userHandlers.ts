@@ -33,12 +33,12 @@ const getServiceKeyboard = (category: string, userId: number) => {
   const categoryServices = services[category as keyof Services];
   const userState = userStates.get(userId) || { selectedServices: new Map(), currentCategory: category };
 
-  const buttons = categoryServices.map(service => {
+  const buttons = categoryServices.map((service, idx) => {
     const quantity = userState.selectedServices.get(service.name) || 0;
     const buttonText = quantity > 0
       ? `✔️ ${service.name} – ${service.price} MDL × ${quantity}`
       : `${service.name} – ${service.price} MDL`;
-    return [Markup.button.callback(buttonText, `service_${category}_${service.name}`)];
+    return [Markup.button.callback(buttonText, `service_${category}_${idx}`)];
   });
 
   buttons.push([
@@ -70,18 +70,18 @@ export const setupUserHandlers = (bot: Telegraf) => {
   });
 
   // Handle service selection
-  bot.action(/^service_(.+)_(.+)$/, async (ctx) => {
-    const [_, category, serviceName] = ctx.match;
+  bot.action(/^service_(.+)_(\d+)$/, async (ctx) => {
+    const [_, category, idxStr] = ctx.match;
+    const idx = parseInt(idxStr);
     const userId = ctx.from?.id;
-    
     if (!userId) return;
-
     const userState = userStates.get(userId);
     if (!userState) return;
-
-    const currentQuantity = userState.selectedServices.get(serviceName) || 0;
-    userState.selectedServices.set(serviceName, currentQuantity + 1);
-
+    const services = loadServices();
+    const service = services[category as keyof Services][idx];
+    if (!service) return;
+    const currentQuantity = userState.selectedServices.get(service.name) || 0;
+    userState.selectedServices.set(service.name, currentQuantity + 1);
     await ctx.editMessageText(
       'Выберите услуги:',
       getServiceKeyboard(category, userId)

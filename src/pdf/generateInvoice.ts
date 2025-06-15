@@ -35,7 +35,7 @@ export const generateInvoice = async (
         mkdirSync(tempDir, { recursive: true });
       }
 
-      // Подключаем шрифт
+      // Connect font
       const fontPath = join(__dirname, 'fonts', 'DejaVuSans.ttf');
       doc.registerFont('dejavu', fontPath);
       doc.font('dejavu');
@@ -62,6 +62,10 @@ export const generateInvoice = async (
       
       const date = new Date().toLocaleDateString('ru-RU');
       doc.fontSize(12).text(`Дата: ${date}`, { align: 'right' });
+      doc.moveDown();
+
+      // Add line for vehicle number
+      doc.fontSize(12).text('Номер транспортного средства: ___________________________');
       doc.moveDown();
 
       doc.fontSize(14).text('Выбранные услуги:');

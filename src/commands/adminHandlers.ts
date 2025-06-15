@@ -59,9 +59,9 @@ const showAdminMenu = async (ctx: Context) => {
 };
 
 export const setupAdminHandlers = (bot: Telegraf) => {
-  // Обработка текстовых сообщений для пароля и добавления услуги
+  // Handle text messages for password and service addition
   bot.on('text', async (ctx) => {
-    // 1. Ввод пароля администратора
+    // 1. Admin password input
     if (ctx.session?.waitingForPassword) {
       const password = ctx.message.text;
       if (password === process.env.ADMIN_PASSWORD) {
@@ -75,7 +75,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
       return;
     }
 
-    // 2. Добавление услуги
+    // 2. Adding service
     if (ctx.session?.isAdmin && ctx.session.addingService) {
       if (!ctx.session.addingService.name) {
         ctx.session.addingService.name = ctx.message.text;
@@ -102,7 +102,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
       return;
     }
 
-    // 3. Редактирование услуги
+    // 3. Editing service
     if (ctx.session?.isAdmin && ctx.session.editIndex !== undefined && ctx.session.editCategory) {
       const services = loadServices();
       const category = ctx.session.editCategory as keyof Services;
@@ -203,7 +203,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await ctx.replyWithDocument({ source: filePath });
   });
 
-  // 1. Кнопка "Редактировать услугу" — выбор категории
+  // 1. "Edit service" button - category selection
   bot.action('admin_edit_service', async (ctx) => {
     if (!ctx.session?.isAdmin) return;
 
@@ -217,7 +217,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await ctx.editMessageText('Выберите категорию для редактирования услуги:', keyboard);
   });
 
-  // 2. Выбор услуги в категории
+  // 2. Service selection in category
   bot.action(/^edit_(car|moto|additional)$/, async (ctx) => {
     if (!ctx.session?.isAdmin) return;
     const category = ctx.match[1];
@@ -237,7 +237,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await ctx.editMessageText('Выберите услугу для редактирования:', Markup.inlineKeyboard(buttons));
   });
 
-  // 3. Запросить новое имя/цену
+  // 3. Request new name/price
   bot.action(/^edit_service_(\d+)$/, async (ctx) => {
     if (!ctx.session?.isAdmin || !ctx.session.editCategory) return;
     const idx = parseInt(ctx.match[1]);
@@ -246,7 +246,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await ctx.editMessageText('Введите новое название услуги (или отправьте - чтобы не менять):');
   });
 
-  // 1. Кнопка "Удалить услугу" — выбор категории
+  // 1. "Delete service" button - category selection
   bot.action('admin_delete_service', async (ctx) => {
     if (!ctx.session?.isAdmin) return;
 
@@ -260,7 +260,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await ctx.editMessageText('Выберите категорию для удаления услуги:', keyboard);
   });
 
-  // 2. Выбор услуги в категории
+  // 2. Service selection in category
   bot.action(/^delete_(car|moto|additional)$/, async (ctx) => {
     if (!ctx.session?.isAdmin) return;
     const category = ctx.match[1];
@@ -280,7 +280,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await ctx.editMessageText('Выберите услугу для удаления:', Markup.inlineKeyboard(buttons));
   });
 
-  // 3. Подтверждение удаления
+  // 3. Confirm deletion
   bot.action(/^delete_service_(\d+)$/, async (ctx) => {
     if (!ctx.session?.isAdmin || !ctx.session.deleteCategory) return;
     const idx = parseInt(ctx.match[1]);
@@ -298,7 +298,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     );
   });
 
-  // 4. Отмена удаления
+  // 4. Cancel deletion
   bot.action('cancel_delete', async (ctx) => {
     delete ctx.session.deleteCategory;
     delete ctx.session.deleteIndex;
@@ -306,7 +306,7 @@ export const setupAdminHandlers = (bot: Telegraf) => {
     await showAdminMenu(ctx);
   });
 
-  // 5. Подтверждение удаления
+  // 5. Confirm deletion
   bot.action('confirm_delete', async (ctx) => {
     if (!ctx.session?.isAdmin || ctx.session.deleteIndex === undefined || !ctx.session.deleteCategory) return;
     const services = loadServices();

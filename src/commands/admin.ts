@@ -12,13 +12,13 @@ export const adminCommand = async (ctx: Context) => {
   const userId = ctx.from?.id;
   if (!userId) return;
 
-  // Проверяем, авторизован ли пользователь как админ
+  // Check if the user is already authenticated as admin
   if (ctx.session && (ctx.session as any).isAdmin) {
     await showAdminMenu(ctx);
     return;
   }
 
-  // Запрашиваем пароль
+  // Request password
   await ctx.reply('Введите пароль администратора:');
   if (!ctx.session) ctx.session = {};
   (ctx.session as any).waitingForPassword = true;
