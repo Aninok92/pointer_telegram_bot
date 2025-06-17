@@ -6,13 +6,23 @@ export interface Service {
 }
 
 export interface Services {
-  car: Service[];
-  moto: Service[];
-  additional: Service[];
+  [category: string]: Service[];
+}
+
+export interface AdminState {
+  step: string;
+  category?: string;
+  name?: string;
+  price?: number;
+  serviceIndex?: number;
+  newName?: string;
+  newPrice?: number;
 }
 
 export interface SessionData {
   isAdmin?: boolean;
+  adminState?: AdminState;
+  selectedServices?: { [category: string]: { [index: string]: number } };
   waitingForPassword?: boolean;
   addingService?: {
     category: string;

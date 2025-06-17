@@ -27,10 +27,12 @@ const getServiceKeyboard = (category: string, userId: number) => {
     return [Markup.button.callback(buttonText, `service_${category}_${idx}`)];
   });
 
-  buttons.push([
-    Markup.button.callback(messages.user.buttons.clearSelection, 'clear_selection'),
-    Markup.button.callback(messages.user.buttons.finishSelection, 'finish_selection')
-  ]);
+  if (userState.selectedServices.size > 0) {
+    buttons.push([
+      Markup.button.callback(messages.user.buttons.clearSelection, 'clear_selection'),
+      Markup.button.callback(messages.user.buttons.finishSelection, 'finish_selection')
+    ]);
+  }
 
   return Markup.inlineKeyboard(buttons);
 };
@@ -38,95 +40,110 @@ const getServiceKeyboard = (category: string, userId: number) => {
 export const setupUserHandlers = (bot: Telegraf) => {
   // Handle category selection
   bot.action(/^category_(.+)$/, async (ctx) => {
-    const category = ctx.match[1];
-    const userId = ctx.from?.id;
-    
-    if (!userId) return;
+    try {
+      const category = ctx.match[1];
+      const userId = ctx.from?.id;
+      
+      if (!userId) return;
 
-    if (!userStates.has(userId)) {
-      userStates.set(userId, { selectedServices: new Map(), currentCategory: category });
-    } else {
-      userStates.get(userId)!.currentCategory = category;
+      if (!userStates.has(userId)) {
+        userStates.set(userId, { selectedServices: new Map(), currentCategory: category });
+      } else {
+        userStates.get(userId)!.currentCategory = category;
+      }
+
+      await ctx.editMessageText(
+        messages.user.selectServices,
+        getServiceKeyboard(category, userId)
+      );
+    } catch (error) {
+      console.error('Error in category selection:', error);
+      await ctx.reply(messages.common.error);
     }
-
-    await ctx.editMessageText(
-      messages.user.selectServices,
-      getServiceKeyboard(category, userId)
-    );
   });
 
   // Handle service selection
   bot.action(/^service_(.+)_(\d+)$/, async (ctx) => {
-    const [_, category, idxStr] = ctx.match;
-    const idx = parseInt(idxStr);
-    const userId = ctx.from?.id;
-    if (!userId) return;
-    const userState = userStates.get(userId);
-    if (!userState) return;
-    const services = loadServices();
-    const service = services[category as keyof Services][idx];
-    if (!service) return;
-    const currentQuantity = userState.selectedServices.get(service.name) || 0;
-    userState.selectedServices.set(service.name, currentQuantity + 1);
-    await ctx.editMessageText(
-      messages.user.selectServices,
-      getServiceKeyboard(category, userId)
-    );
+    try {
+      const [_, category, idxStr] = ctx.match;
+      const idx = parseInt(idxStr);
+      const userId = ctx.from?.id;
+      if (!userId) return;
+      const userState = userStates.get(userId);
+      if (!userState) return;
+      const services = loadServices();
+      const service = services[category as keyof Services][idx];
+      if (!service) return;
+      const currentQuantity = userState.selectedServices.get(service.name) || 0;
+      userState.selectedServices.set(service.name, currentQuantity + 1);
+      await ctx.editMessageText(
+        messages.user.selectServices,
+        getServiceKeyboard(category, userId)
+      );
+    } catch (error) {
+      console.error('Error in service selection:', error);
+      await ctx.reply(messages.common.error);
+    }
   });
 
   // Handle finish selection
   bot.action('finish_selection', async (ctx) => {
-    const userId = ctx.from?.id;
-    if (!userId) return;
+    try {
+      const userId = ctx.from?.id;
+      if (!userId) return;
 
-    const userState = userStates.get(userId);
-    if (!userState) return;
+      const userState = userStates.get(userId);
+      if (!userState) return;
 
-    const services = loadServices();
-    let total = 0;
-    let message = messages.user.finishSelection + '\n';
+      const services = loadServices();
+      let total = 0;
+      let message = messages.user.finishSelection + '\n';
 
-    for (const [serviceName, quantity] of userState.selectedServices.entries()) {
-      const service = services[userState.currentCategory as keyof Services]
-        .find(s => s.name === serviceName);
-      
-      if (service) {
-        const serviceTotal = service.price * quantity;
-        total += serviceTotal;
-        message += `– ${serviceName} ×${quantity} – ${serviceTotal} ${messages.pdf.currency}\n`;
+      for (const [serviceName, quantity] of userState.selectedServices.entries()) {
+        const service = services[userState.currentCategory as keyof Services]
+          .find(s => s.name === serviceName);
+        
+        if (service) {
+          const serviceTotal = service.price * quantity;
+          total += serviceTotal;
+          message += `– ${serviceName} ×${quantity} – ${serviceTotal} ${messages.pdf.currency}\n`;
+        }
       }
+
+      message += messages.user.total(total);
+
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback(messages.user.getPdf, 'generate_pdf')]
+      ]);
+
+      await ctx.editMessageText(message, keyboard);
+    } catch (error) {
+      console.error('Error in finish selection:', error);
+      await ctx.reply(messages.common.error);
     }
-
-    message += messages.user.total(total);
-
-    const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback(messages.user.getPdf, 'generate_pdf')]
-    ]);
-
-    await ctx.editMessageText(message, keyboard);
   });
 
   // Handle PDF generation
   bot.action('generate_pdf', async (ctx) => {
-    const userId = ctx.from?.id;
-    if (!userId) return;
-
-    const userState = userStates.get(userId);
-    if (!userState) return;
-
-    const services = loadServices();
-    let total = 0;
-
-    for (const [serviceName, quantity] of userState.selectedServices.entries()) {
-      const service = services[userState.currentCategory as keyof Services]
-        .find(s => s.name === serviceName);
-      
-      if (service) {
-        total += service.price * quantity;
-      }
-    }
-
     try {
+      const userId = ctx.from?.id;
+      if (!userId) return;
+
+      const userState = userStates.get(userId);
+      if (!userState) return;
+
+      const services = loadServices();
+      let total = 0;
+
+      for (const [serviceName, quantity] of userState.selectedServices.entries()) {
+        const service = services[userState.currentCategory as keyof Services]
+          .find(s => s.name === serviceName);
+        
+        if (service) {
+          total += service.price * quantity;
+        }
+      }
+
       await ctx.answerCbQuery(messages.user.pdfGenerating);
       
       // Create temp directory if it doesn't exist
@@ -156,18 +173,23 @@ export const setupUserHandlers = (bot: Telegraf) => {
 
   // Handle clearing selection
   bot.action('clear_selection', async (ctx) => {
-    const userId = ctx.from?.id;
-    if (!userId) return;
+    try {
+      const userId = ctx.from?.id;
+      if (!userId) return;
 
-    const userState = userStates.get(userId);
-    if (!userState) return;
+      const userState = userStates.get(userId);
+      if (!userState) return;
 
-    userState.selectedServices.clear();
+      userState.selectedServices.clear();
 
-    await ctx.editMessageText(
-      messages.user.selectServices,
-      getServiceKeyboard(userState.currentCategory, userId)
-    );
-    await ctx.answerCbQuery(messages.user.clearSelection);
+      await ctx.editMessageText(
+        messages.user.selectServices,
+        getServiceKeyboard(userState.currentCategory, userId)
+      );
+      await ctx.answerCbQuery(messages.user.clearSelection);
+    } catch (error) {
+      console.error('Error clearing selection:', error);
+      await ctx.reply(messages.common.error);
+    }
   });
 }; 

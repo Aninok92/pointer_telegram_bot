@@ -5,8 +5,13 @@ import { messages } from '../utils/messages';
 import { Services } from '../types';
 
 const loadServices = (): Services => {
-  const servicesPath = join(__dirname, '../data/services.json');
-  return require(servicesPath);
+  try {
+    const servicesPath = join(__dirname, '../data/services.json');
+    return require(servicesPath);
+  } catch (error) {
+    console.error('Error loading services:', error);
+    throw new Error('Failed to load services data');
+  }
 };
 
 export const generateInvoice = (
@@ -31,6 +36,9 @@ export const generateInvoice = (
 
       // Connect font
       const fontPath = join(__dirname, 'fonts', 'DejaVuSans.ttf');
+      if (!existsSync(fontPath)) {
+        throw new Error('Font file not found');
+      }
       doc.registerFont('dejavu', fontPath);
       doc.font('dejavu');
 
@@ -39,6 +47,7 @@ export const generateInvoice = (
 
       // Handle stream errors
       writeStream.on('error', (error) => {
+        console.error('Error writing PDF file:', error);
         reject(error);
       });
 
@@ -69,6 +78,10 @@ export const generateInvoice = (
       const allServices = loadServices();
       const categoryServices = allServices[category as keyof Services];
 
+      if (!categoryServices) {
+        throw new Error(`Category ${category} not found in services`);
+      }
+
       for (const [serviceName, quantity] of services.entries()) {
         const service = categoryServices.find(s => s.name === serviceName);
         if (service) {
@@ -85,6 +98,7 @@ export const generateInvoice = (
       // Finalize PDF
       doc.end();
     } catch (error) {
+      console.error('Error generating PDF:', error);
       reject(error);
     }
   });

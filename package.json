@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npm run copy-files",
+    "copy-files": "mkdir -p dist/data dist/pdf/fonts && cp src/data/services.json dist/data/ && cp src/pdf/fonts/DejaVuSans.ttf dist/pdf/fonts/",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {

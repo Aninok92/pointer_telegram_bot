@@ -8,6 +8,7 @@ import { logoutCommand } from './commands/logout';
 import Redis from 'ioredis';
 import { messages } from './utils/messages';
 import { cancelCommand } from './commands/cancel';
+import { logger } from './utils/logger';
 
 // Load environment variables
 config();
@@ -59,11 +60,21 @@ bot.telegram.setMyCommands([
 // Start bot
 bot.launch().then(() => {
   console.log('Bot started successfully');
+  logger.debug('Bot started successfully');
+  
+  // Additional startup tasks can be added here if necessary
 }).catch((error) => {
   console.error('Error starting bot:', error);
+  logger.error('Error starting bot', error as Error);
 });
 
 // Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM')); 
+process.once('SIGINT', () => {
+  logger.debug('Bot stopping - SIGINT');
+  bot.stop('SIGINT');
+});
+process.once('SIGTERM', () => {
+  logger.debug('Bot stopping - SIGTERM');
+  bot.stop('SIGTERM');
+}); 
 

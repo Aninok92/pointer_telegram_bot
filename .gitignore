@@ -1,22 +1,26 @@
 # Dependencies
 node_modules/
-
-# Build output
-dist/
+package-lock.json
 
 # Environment variables
 .env
+
+# Build output
+dist/
+build/
 
 # IDE files
 .vscode/
 .idea/
 
 # Logs
+logs/
 *.log
 npm-debug.log*
 
 # Temporary files
 temp/
+*.pdf
 
 # OS files
 .DS_Store
