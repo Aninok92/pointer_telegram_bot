@@ -129,7 +129,16 @@ export const setupAdminHandlers = (bot: Telegraf) => {
       message += '\n';
     }
 
-    await ctx.editMessageText(message);
+    const keyboard = Markup.inlineKeyboard([
+      [Markup.button.callback(messages.common.back, 'admin_menu')]
+    ]);
+    await ctx.editMessageText(message, keyboard);
+  });
+
+  // Handle back to admin menu
+  bot.action('admin_menu', async (ctx) => {
+    if (!ctx.session?.isAdmin) return;
+    await showAdminMenu(ctx);
   });
 
   // Add service
