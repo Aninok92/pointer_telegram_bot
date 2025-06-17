@@ -7,6 +7,7 @@ import { setupAdminHandlers } from './commands/adminHandlers';
 import { logoutCommand } from './commands/logout';
 import Redis from 'ioredis';
 import { messages } from './utils/messages';
+import { cancelCommand } from './commands/cancel';
 
 // Load environment variables
 config();
@@ -41,6 +42,7 @@ bot.use(session({
 bot.command('start', startCommand);
 bot.command('admin', adminCommand);
 bot.command('logout', logoutCommand);
+bot.command('cancel', cancelCommand);
 
 // Setup handlers
 setupUserHandlers(bot);
@@ -50,7 +52,8 @@ setupAdminHandlers(bot);
 bot.telegram.setMyCommands([
   { command: 'start', description: messages.commands.start },
   { command: 'admin', description: messages.commands.admin },
-  { command: 'logout', description: messages.commands.logout }
+  { command: 'logout', description: messages.commands.logout },
+  { command: 'cancel', description: messages.commands.cancel }
 ]);
 
 // Start bot

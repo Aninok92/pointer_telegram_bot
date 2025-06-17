@@ -17,7 +17,10 @@ export const generateInvoice = (
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument();
-      const fileName = `invoice_${Date.now()}.pdf`;
+      const now = new Date();
+      const fileDate = now.toLocaleDateString('ru-RU').split('.').reverse().join('-');
+      const fileTime = now.toLocaleTimeString('ru-RU').replace(/:/g, '-');
+      const fileName = `invoice_${category}_${fileDate}_${fileTime}.pdf`;
       const tempDir = join(__dirname, '../../temp');
       const filePath = join(tempDir, fileName);
 
