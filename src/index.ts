@@ -37,15 +37,37 @@ bot.telegram.setMyCommands([
 ]);
 
 // Start bot
-bot.launch().then(() => {
-  console.log('Bot started successfully');
-  logger.debug('Bot started successfully');
-  
-  // Additional startup tasks can be added here if necessary
-}).catch((error) => {
-  console.error('Error starting bot:', error);
-  logger.error('Error starting bot', error as Error);
-});
+const isProduction = process.env.RENDER || process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  // Для Render/webhook
+  const domain = process.env.RENDER_EXTERNAL_URL || process.env.RENDER_DOMAIN || process.env.WEBHOOK_DOMAIN;
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+  if (!domain) {
+    throw new Error('WEBHOOK_DOMAIN (RENDER_EXTERNAL_URL) is not set for webhook mode');
+  }
+  bot.launch({
+    webhook: {
+      domain,
+      port,
+    }
+  }).then(() => {
+    console.log(`Bot started in webhook mode at ${domain}:${port}`);
+    logger.debug(`Bot started in webhook mode at ${domain}:${port}`);
+  }).catch((error) => {
+    console.error('Error starting bot (webhook):', error);
+    logger.error('Error starting bot (webhook)', error as Error);
+  });
+} else {
+  // Локально — polling
+  bot.launch().then(() => {
+    console.log('Bot started in polling mode');
+    logger.debug('Bot started in polling mode');
+  }).catch((error) => {
+    console.error('Error starting bot (polling):', error);
+    logger.error('Error starting bot (polling)', error as Error);
+  });
+}
 
 // Enable graceful stop
 process.once('SIGINT', () => {
