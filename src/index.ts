@@ -5,7 +5,6 @@ import { adminCommand } from './commands/admin';
 import { setupUserHandlers } from './commands/userHandlers';
 import { setupAdminHandlers } from './commands/adminHandlers';
 import { logoutCommand } from './commands/logout';
-import Redis from 'ioredis';
 import { messages } from './utils/messages';
 import { cancelCommand } from './commands/cancel';
 import { logger } from './utils/logger';
@@ -16,28 +15,8 @@ config();
 // Initialize bot
 const bot = new Telegraf(process.env.BOT_TOKEN || '');
 
-// Redis client
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-});
-
-// Session middleware with Redis storage
-bot.use(session({
-  store: {
-    async get(key: string) {
-      const data = await redis.get(key);
-      return data ? JSON.parse(data) : undefined;
-    },
-    async set(key: string, value: any) {
-      await redis.set(key, JSON.stringify(value));
-    },
-    async delete(key: string) {
-      await redis.del(key);
-    }
-  }
-}));
+// Session middleware (in-memory)
+bot.use(session());
 
 // Register commands
 bot.command('start', startCommand);
